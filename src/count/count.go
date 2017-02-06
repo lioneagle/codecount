@@ -17,7 +17,7 @@ type CodeStat struct {
 }
 
 func (c *CodeStat) String() string {
-	return fmt.Sprintf("Total = %d, Code = %d, Comment = %d, Blank = %d, CommentPercent = %.2f%",
+	return fmt.Sprintf("Total = %d, Code = %d, Comment = %d, Blank = %d, CommentPercent = %.2f%%",
 		c.Total, c.Code, c.Comment, c.Blank, c.CommentPercent())
 }
 
@@ -29,7 +29,10 @@ func (c *CodeStat) Add(rhs *CodeStat) {
 }
 
 func (c *CodeStat) CommentPercent() float64 {
-	return float64(c.Comment) / float64(c.Code+c.Comment)
+	if (c.Code + c.Comment) == 0 {
+		return 0.0
+	}
+	return float64(c.Comment) / float64(c.Code+c.Comment) * 100
 }
 
 const (
@@ -137,6 +140,7 @@ func (c *GoCounter) ParseLine(line string) (stat CodeStat) {
 			}
 
 		case GO_CODE_COUNT_STATE_COMMENT1:
+			hasComment = true
 			if v == '*' {
 				c.state = GO_CODE_COUNT_STATE_COMMENT1_STAR
 			}
