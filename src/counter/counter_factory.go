@@ -12,6 +12,7 @@ func NewCodeCounterFactory() *CodeCounterFactory {
 	factory := &CodeCounterFactory{}
 	factory.maps = make(map[string]CodeCounter)
 	factory.maps["go"] = NewGoCodeCounter()
+	factory.maps["cpp"] = NewCppCodeCounter()
 	return factory
 }
 

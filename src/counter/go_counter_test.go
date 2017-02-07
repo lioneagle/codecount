@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestParseLine(t *testing.T) {
+func TestGoCodeCounterParseLine(t *testing.T) {
 	testdata := []struct {
 		line string
 		stat CodeStat
@@ -36,13 +36,13 @@ func TestParseLine(t *testing.T) {
 		stat := counter.ParseLine(v.line)
 
 		if stat != v.stat {
-			t.Errorf("TestParseLine[%d] failed, stat = %s, wanted = %s", i, stat.String(), v.stat.String())
+			t.Errorf("TestGoCodeCounterParseLine[%d] failed, stat = %s, wanted = %s", i, stat.String(), v.stat.String())
 			continue
 		}
 	}
 }
 
-func TestParseFile(t *testing.T) {
+func TestGoCodeCounterParseFile(t *testing.T) {
 	//dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	//fmt.Printf("arg[0] = %s, dir = %s\n", os.Args[0], dir)
 
@@ -54,12 +54,12 @@ func TestParseFile(t *testing.T) {
 
 	stat, ok := counter.ParseFile(filename)
 	if !ok {
-		t.Errorf("TestParseFile failed, ParseFile failed")
+		t.Errorf("TestGoCodeCounterParseFile failed, ParseFile failed")
 		return
 	}
 
 	if stat != wanted {
-		t.Errorf("TestParseFile failed, stat = %s, wanted = %s", stat.String(), wanted.String())
+		t.Errorf("TestGoCodeCounterParseFile failed, stat = %s, wanted = %s", stat.String(), wanted.String())
 		return
 	}
 }
