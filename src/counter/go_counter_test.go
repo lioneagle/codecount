@@ -1,4 +1,4 @@
-package count
+package counter
 
 import (
 	//"fmt"
@@ -31,7 +31,7 @@ func TestParseLine(t *testing.T) {
 	}
 
 	for i, v := range testdata {
-		counter := &GoCounter{}
+		counter, _ := NewCodeCounterFactory().NewCounter("go")
 
 		stat := counter.ParseLine(v.line)
 
@@ -49,8 +49,8 @@ func TestParseFile(t *testing.T) {
 	//filename := "testdata/test1.go"
 	filename := "F:/dev/go_code/src/codecount/src/testdata/test1.go"
 
-	counter := &GoCounter{}
-	wanted := CodeStat{Total: 8, Code: 4, Comment: 3, Blank: 1}
+	counter, _ := NewCodeCounterFactory().NewCounter("go")
+	wanted := CodeStat{Total: 12, Code: 8, Comment: 3, Blank: 1}
 
 	stat, ok := counter.ParseFile(filename)
 	if !ok {

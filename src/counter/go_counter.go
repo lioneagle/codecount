@@ -1,55 +1,33 @@
-package count
+package counter
 
 import (
 	"bufio"
-	"fmt"
+	//"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
 )
 
-type CodeStat struct {
-	Total   int
-	Code    int
-	Comment int
-	Blank   int
-}
-
-func (c *CodeStat) String() string {
-	return fmt.Sprintf("Total = %d, Code = %d, Comment = %d, Blank = %d, CommentPercent = %.2f%%",
-		c.Total, c.Code, c.Comment, c.Blank, c.CommentPercent())
-}
-
-func (c *CodeStat) Add(rhs *CodeStat) {
-	c.Total += rhs.Total
-	c.Code += rhs.Code
-	c.Comment += rhs.Comment
-	c.Blank += rhs.Blank
-}
-
-func (c *CodeStat) CommentPercent() float64 {
-	if (c.Code + c.Comment) == 0 {
-		return 0.0
-	}
-	return float64(c.Comment) / float64(c.Code+c.Comment) * 100
-}
-
 const (
-	GO_CODE_COUNT_STATE_INIT           = 0
-	GO_CODE_COUNT_STATE_SLASH          = 1
-	GO_CODE_COUNT_STATE_COMMENT1       = 2
-	GO_CODE_COUNT_STATE_COMMENT1_STAR  = 3
-	GO_CODE_COUNT_STATE_COMMENT2       = 4
-	GO_CODE_COUNT_STATE_CODE           = 5
-	GO_CODE_COUNT_STATE_STRING1        = 6
-	GO_CODE_COUNT_STATE_STRING1_ESCAPE = 7
-	GO_CODE_COUNT_STATE_STRING2        = 8
-	GO_CODE_COUNT_STATE_STRING2_ESCAPE = 9
+	GO_CODE_COUNT_STATE_INIT                = 0
+	GO_CODE_COUNT_STATE_SLASH               = 1
+	GO_CODE_COUNT_STATE_BLOCK_COMMENT       = 2
+	GO_CODE_COUNT_STATE_BLOCK_COMMENT_STAR  = 3
+	GO_CODE_COUNT_STATE_LINE_COMMENT        = 4
+	GO_CODE_COUNT_STATE_CODE                = 5
+	GO_CODE_COUNT_STATE_LINE_STRING         = 6
+	GO_CODE_COUNT_STATE_LINE_STRING_ESCAPE  = 7
+	GO_CODE_COUNT_STATE_BLOCK_STRING        = 8
+	GO_CODE_COUNT_STATE_BLOCK_STRING_ESCAPE = 9
 )
 
 type GoCounter struct {
 	state int
+}
+
+func NewGoCounter() *GoCounter {
+	return &GoCounter{}
 }
 
 func (c *GoCounter) Clear() { c.state = GO_CODE_COUNT_STATE_INIT }
@@ -87,12 +65,12 @@ func (c *GoCounter) ParseLine(line string) (stat CodeStat) {
 	hasCode := false
 	hasComment := false
 
-	if c.state != GO_CODE_COUNT_STATE_COMMENT1 {
+	if c.state != GO_CODE_COUNT_STATE_BLOCK_COMMENT && c.state != GO_CODE_COUNT_STATE_BLOCK_STRING {
 		c.state = GO_CODE_COUNT_STATE_INIT
 	}
 
 	for _, v := range line {
-		if c.state == GO_CODE_COUNT_STATE_COMMENT2 {
+		if c.state == GO_CODE_COUNT_STATE_LINE_COMMENT {
 			break
 		}
 
@@ -110,10 +88,10 @@ func (c *GoCounter) ParseLine(line string) (stat CodeStat) {
 			case '/':
 				c.state = GO_CODE_COUNT_STATE_SLASH
 			case '"':
-				c.state = GO_CODE_COUNT_STATE_STRING1
+				c.state = GO_CODE_COUNT_STATE_LINE_STRING
 				hasCode = true
 			case '`':
-				c.state = GO_CODE_COUNT_STATE_STRING2
+				c.state = GO_CODE_COUNT_STATE_BLOCK_STRING
 				hasCode = true
 			default:
 				c.state = GO_CODE_COUNT_STATE_CODE
@@ -123,29 +101,29 @@ func (c *GoCounter) ParseLine(line string) (stat CodeStat) {
 		case GO_CODE_COUNT_STATE_SLASH:
 			switch v {
 			case '*':
-				c.state = GO_CODE_COUNT_STATE_COMMENT1
+				c.state = GO_CODE_COUNT_STATE_BLOCK_COMMENT
 				hasComment = true
 			case '/':
-				c.state = GO_CODE_COUNT_STATE_COMMENT2
+				c.state = GO_CODE_COUNT_STATE_LINE_COMMENT
 				hasComment = true
 			case '"':
-				c.state = GO_CODE_COUNT_STATE_STRING1
+				c.state = GO_CODE_COUNT_STATE_LINE_STRING
 				hasCode = true
 			case '`':
-				c.state = GO_CODE_COUNT_STATE_STRING2
+				c.state = GO_CODE_COUNT_STATE_BLOCK_STRING
 				hasCode = true
 			default:
 				c.state = GO_CODE_COUNT_STATE_CODE
 				hasCode = true
 			}
 
-		case GO_CODE_COUNT_STATE_COMMENT1:
+		case GO_CODE_COUNT_STATE_BLOCK_COMMENT:
 			hasComment = true
 			if v == '*' {
-				c.state = GO_CODE_COUNT_STATE_COMMENT1_STAR
+				c.state = GO_CODE_COUNT_STATE_BLOCK_COMMENT_STAR
 			}
 
-		case GO_CODE_COUNT_STATE_COMMENT1_STAR:
+		case GO_CODE_COUNT_STATE_BLOCK_COMMENT_STAR:
 			if v == '/' {
 				c.state = GO_CODE_COUNT_STATE_INIT
 			}
@@ -159,42 +137,43 @@ func (c *GoCounter) ParseLine(line string) (stat CodeStat) {
 			case '/':
 				c.state = GO_CODE_COUNT_STATE_SLASH
 			case '"':
-				c.state = GO_CODE_COUNT_STATE_STRING1
+				c.state = GO_CODE_COUNT_STATE_LINE_STRING
 				hasCode = true
 			case '`':
-				c.state = GO_CODE_COUNT_STATE_STRING2
+				c.state = GO_CODE_COUNT_STATE_BLOCK_STRING
 				hasCode = true
 			default:
 				c.state = GO_CODE_COUNT_STATE_CODE
 				hasCode = true
 			}
 
-		case GO_CODE_COUNT_STATE_STRING1:
+		case GO_CODE_COUNT_STATE_LINE_STRING:
 			switch v {
 			case '\\':
-				c.state = GO_CODE_COUNT_STATE_STRING1_ESCAPE
+				c.state = GO_CODE_COUNT_STATE_LINE_STRING_ESCAPE
 			case '"':
 				c.state = GO_CODE_COUNT_STATE_CODE
 			default:
-				c.state = GO_CODE_COUNT_STATE_STRING1
+				c.state = GO_CODE_COUNT_STATE_LINE_STRING
 			}
 
-		case GO_CODE_COUNT_STATE_STRING2:
+		case GO_CODE_COUNT_STATE_BLOCK_STRING:
+			hasCode = true
 			switch v {
 			case '\\':
-				c.state = GO_CODE_COUNT_STATE_STRING2_ESCAPE
+				c.state = GO_CODE_COUNT_STATE_BLOCK_STRING_ESCAPE
 			case '`':
 				c.state = GO_CODE_COUNT_STATE_CODE
 				hasCode = true
 			default:
-				c.state = GO_CODE_COUNT_STATE_STRING2
+				c.state = GO_CODE_COUNT_STATE_BLOCK_STRING
 			}
 
-		case GO_CODE_COUNT_STATE_STRING1_ESCAPE:
-			c.state = GO_CODE_COUNT_STATE_STRING1
+		case GO_CODE_COUNT_STATE_LINE_STRING_ESCAPE:
+			c.state = GO_CODE_COUNT_STATE_LINE_STRING
 
-		case GO_CODE_COUNT_STATE_STRING2_ESCAPE:
-			c.state = GO_CODE_COUNT_STATE_STRING2
+		case GO_CODE_COUNT_STATE_BLOCK_STRING_ESCAPE:
+			c.state = GO_CODE_COUNT_STATE_BLOCK_STRING
 
 		}
 	}

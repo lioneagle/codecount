@@ -4,5 +4,9 @@ package main
  */
 func main() {
 	// comment2
+	a := `
+	//
+	/*
+	`
 	return
 }
