@@ -11,7 +11,7 @@ type CodeCounterFactory struct {
 func NewCodeCounterFactory() *CodeCounterFactory {
 	factory := &CodeCounterFactory{}
 	factory.maps = make(map[string]CodeCounter)
-	factory.maps["go"] = NewGoCounter()
+	factory.maps["go"] = NewGoCodeCounter()
 	return factory
 }
 

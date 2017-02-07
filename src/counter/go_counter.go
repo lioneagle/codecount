@@ -22,17 +22,17 @@ const (
 	GO_CODE_COUNT_STATE_BLOCK_STRING_ESCAPE = 9
 )
 
-type GoCounter struct {
+type GoCodeCounter struct {
 	state int
 }
 
-func NewGoCounter() *GoCounter {
-	return &GoCounter{}
+func NewGoCodeCounter() *GoCodeCounter {
+	return &GoCodeCounter{}
 }
 
-func (c *GoCounter) Clear() { c.state = GO_CODE_COUNT_STATE_INIT }
+func (c *GoCodeCounter) Clear() { c.state = GO_CODE_COUNT_STATE_INIT }
 
-func (c *GoCounter) ParseFile(filename string) (stat CodeStat, ok bool) {
+func (c *GoCodeCounter) ParseFile(filename string) (stat CodeStat, ok bool) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Printf("ERROR: cannot open file %s", filename)
@@ -53,7 +53,7 @@ func (c *GoCounter) ParseFile(filename string) (stat CodeStat, ok bool) {
 	return stat, true
 }
 
-func (c *GoCounter) ParseLine(line string) (stat CodeStat) {
+func (c *GoCodeCounter) ParseLine(line string) (stat CodeStat) {
 	stat.Total = 1
 	line = strings.TrimSpace(line)
 
