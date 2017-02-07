@@ -35,6 +35,9 @@ func getFiles(root string, filter string, files *fileList) error {
 
 func main() {
 
+	test1 := `a\r\n`
+	fmt.Println(test1)
+
 	filter := "*.go"
 	root := "F:/dev/go_code/src/codecount"
 

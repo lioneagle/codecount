@@ -10,15 +10,16 @@ import (
 )
 
 const (
-	GO_CODE_COUNT_STATE_INIT               = 0
-	GO_CODE_COUNT_STATE_SLASH              = 1
-	GO_CODE_COUNT_STATE_BLOCK_COMMENT      = 2
-	GO_CODE_COUNT_STATE_BLOCK_COMMENT_STAR = 3
-	GO_CODE_COUNT_STATE_LINE_COMMENT       = 4
-	GO_CODE_COUNT_STATE_CODE               = 5
-	GO_CODE_COUNT_STATE_LINE_STRING        = 6
-	GO_CODE_COUNT_STATE_LINE_STRING_ESCAPE = 7
-	GO_CODE_COUNT_STATE_BLOCK_STRING       = 8
+	GO_CODE_COUNT_STATE_INIT                = 0
+	GO_CODE_COUNT_STATE_SLASH               = 1
+	GO_CODE_COUNT_STATE_BLOCK_COMMENT       = 2
+	GO_CODE_COUNT_STATE_BLOCK_COMMENT_STAR  = 3
+	GO_CODE_COUNT_STATE_LINE_COMMENT        = 4
+	GO_CODE_COUNT_STATE_CODE                = 5
+	GO_CODE_COUNT_STATE_LINE_STRING         = 6
+	GO_CODE_COUNT_STATE_LINE_STRING_ESCAPE  = 7
+	GO_CODE_COUNT_STATE_BLOCK_STRING        = 8
+	GO_CODE_COUNT_STATE_BLOCK_STRING_ESCAPE = 9
 )
 
 type GoCodeCounter struct {
@@ -141,6 +142,9 @@ func (c *GoCodeCounter) ParseLine(line string) (stat CodeStat) {
 			case '`':
 				c.state = GO_CODE_COUNT_STATE_BLOCK_STRING
 				hasCode = true
+			default:
+				c.state = GO_CODE_COUNT_STATE_CODE
+				hasCode = true
 			}
 
 		case GO_CODE_COUNT_STATE_LINE_STRING:
@@ -149,16 +153,28 @@ func (c *GoCodeCounter) ParseLine(line string) (stat CodeStat) {
 				c.state = GO_CODE_COUNT_STATE_LINE_STRING_ESCAPE
 			case '"':
 				c.state = GO_CODE_COUNT_STATE_CODE
+			default:
+				c.state = GO_CODE_COUNT_STATE_LINE_STRING
 			}
 
 		case GO_CODE_COUNT_STATE_BLOCK_STRING:
 			hasCode = true
-			if v == '`' {
+			switch v {
+			case '\\':
+				c.state = GO_CODE_COUNT_STATE_BLOCK_STRING_ESCAPE
+			case '`':
 				c.state = GO_CODE_COUNT_STATE_CODE
+				hasCode = true
+			default:
+				c.state = GO_CODE_COUNT_STATE_BLOCK_STRING
 			}
 
 		case GO_CODE_COUNT_STATE_LINE_STRING_ESCAPE:
 			c.state = GO_CODE_COUNT_STATE_LINE_STRING
+
+		case GO_CODE_COUNT_STATE_BLOCK_STRING_ESCAPE:
+			c.state = GO_CODE_COUNT_STATE_BLOCK_STRING
+
 		}
 	}
 
