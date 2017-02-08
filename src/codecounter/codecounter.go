@@ -2,6 +2,7 @@ package main
 
 import (
 	"counter"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -29,9 +30,7 @@ func getFiles(root string, filters []string, files *fileList) error {
 			if ok, _ := filepath.Match(v, f.Name()); ok {
 				fileinfo := &fileInfo{filename: path}
 				files.data = append(files.data, fileinfo)
-				//fmt.Println(fileinfo.filename)
 			}
-
 		}
 		return nil
 	}
@@ -52,6 +51,7 @@ func (c *CodeTypeMap) AddCodeType(filters string, codetype string) {
 
 	for _, v := range ext {
 		c.maps[strings.ToLower(filepath.Ext(v)[1:])] = strings.ToLower(codetype)
+
 	}
 }
 
@@ -69,25 +69,40 @@ func NewCodeTypeStats() *CodeTypeStats {
 }
 
 func main() {
-	filter := "*.cpp;*.cxx;*.go"
-	filters := strings.Split(filter, ";")
+
+	codeConfig := []struct {
+		name          string
+		extConfig     string
+		extConfigDesc string
+	}{
+		{"cpp", "*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc;*.c;*.h", "extions for c/c++ files"},
+		{"go", "*.go", "extions for go files"},
+	}
+
+	root := flag.String("path", ".", "path for code")
+	filter := flag.String("filter", "*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc;*.c;*.h;*.go", "file filters")
+
+	exts := make([]*string, 0)
+
+	for _, v := range codeConfig {
+		exts = append(exts, flag.String(v.name, v.extConfig, v.extConfigDesc))
+	}
+
+	flag.Parse()
 
 	codetypeMap := NewCodeTypeMap()
-	codetypeMap.AddCodeType("*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc;*.c;*.h", "cpp")
-	codetypeMap.AddCodeType("*.go", "go")
-
-	codetypes := []string{"cpp", "go"}
-
-	root := "F:/dev/go_code/src/codecount"
-
-	files := &fileList{}
-
-	getFiles(root, filters, files)
-
-	totlStat := &counter.CodeStat{}
 	codetypeStats := NewCodeTypeStats()
+	for i, v := range codeConfig {
+		codetypeMap.AddCodeType(*exts[i], v.name)
+		codetypeStats.maps[v.name] = &CodeTypeStat{}
+	}
 
 	factory := counter.NewCodeCounterFactory()
+
+	files := &fileList{}
+	getFiles(*root, strings.Split(*filter, ";"), files)
+
+	totlStat := &counter.CodeStat{}
 
 	for _, v := range files.data {
 		v.codetype = strings.ToLower(filepath.Ext(v.filename)[1:])
@@ -121,8 +136,10 @@ func main() {
 		fmt.Printf("%s: %s\n", v.filename, stat.String())
 	}
 
-	for _, v := range codetypes {
-		fmt.Printf("total %d %s files: %s\n", codetypeStats.maps[v].filenum, v, codetypeStats.maps[v].stat.String())
+	for _, v := range codeConfig {
+		if codetypeStats.maps[v.name].filenum > 0 {
+			fmt.Printf("total %d %s files: %s\n", codetypeStats.maps[v.name].filenum, v.name, codetypeStats.maps[v.name].stat.String())
+		}
 	}
 	fmt.Printf("total %d files: %s\n", len(files.data), totlStat.String())
 }
