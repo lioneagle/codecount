@@ -50,6 +50,9 @@ func (c *CodeTypeMap) AddCodeType(filters string, codetype string) {
 	ext := strings.Split(filters, ";")
 
 	for _, v := range ext {
+		if v == "" {
+			continue
+		}
 		c.maps[strings.ToLower(filepath.Ext(v)[1:])] = strings.ToLower(codetype)
 
 	}
@@ -75,12 +78,14 @@ func main() {
 		extConfig     string
 		extConfigDesc string
 	}{
-		{"cpp", "*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc;*.c;*.h", "extions for c/c++ files"},
+		{"cpp", "*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc", "extions for c/c++ files"},
+		{"c", "*.c;*.h", "extions for c files"},
 		{"go", "*.go", "extions for go files"},
 	}
 
 	root := flag.String("path", ".", "path for code")
 	filter := flag.String("filter", "*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc;*.c;*.h;*.go", "file filters")
+	showEachFile := flag.Bool("show", false, "disable show each file stat")
 
 	exts := make([]*string, 0)
 
@@ -124,16 +129,18 @@ func main() {
 		}
 		totlStat.Add(&stat)
 
-		codetypeStat, ok := codetypeStats.maps[v.codetype]
+		codetypeStat, ok := codetypeStats.maps[codetype]
 		if !ok {
 			codetypeStat = &CodeTypeStat{}
-			codetypeStats.maps[v.codetype] = codetypeStat
+			codetypeStats.maps[codetype] = codetypeStat
 		}
 
 		codetypeStat.filenum++
 		codetypeStat.stat.Add(&stat)
 
-		fmt.Printf("%s: %s\n", v.filename, stat.String())
+		if *showEachFile {
+			fmt.Printf("%s: %s\n", v.filename, stat.String())
+		}
 	}
 
 	for _, v := range codeConfig {
