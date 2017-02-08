@@ -88,7 +88,6 @@ func main() {
 	showEachFile := flag.Bool("show", false, "disable show each file stat")
 
 	exts := make([]*string, 0)
-
 	for _, v := range codeConfig {
 		exts = append(exts, flag.String(v.name, v.extConfig, v.extConfigDesc))
 	}
