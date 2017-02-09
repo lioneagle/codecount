@@ -94,6 +94,12 @@ func main() {
 
 	flag.Parse()
 
+	_, err := os.Stat(*root)
+	if os.IsNotExist(err) {
+		fmt.Printf("ERROR: path \"%s\" is not exist", *root)
+		return
+	}
+
 	codetypeMap := NewCodeTypeMap()
 	codetypeStats := NewCodeTypeStats()
 	for i, v := range codeConfig {
