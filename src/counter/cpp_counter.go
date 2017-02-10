@@ -56,7 +56,13 @@ func (c *CppCodeCounter) ParseLine(line string) (stat CodeStat) {
 	line = strings.TrimSpace(line)
 
 	if len(line) == 0 {
-		stat.Blank = 1
+		switch c.state {
+		case CPP_CODE_COUNT_STATE_BLOCK_COMMENT:
+			stat.Comment = 1
+		default:
+			stat.Blank = 1
+		}
+
 		return stat
 	}
 
@@ -69,10 +75,6 @@ func (c *CppCodeCounter) ParseLine(line string) (stat CodeStat) {
 
 	for _, v := range line {
 		if c.state == CPP_CODE_COUNT_STATE_LINE_COMMENT {
-			break
-		}
-
-		if hasCode && hasComment {
 			break
 		}
 
@@ -118,6 +120,8 @@ func (c *CppCodeCounter) ParseLine(line string) (stat CodeStat) {
 		case CPP_CODE_COUNT_STATE_BLOCK_COMMENT_STAR:
 			if v == '/' {
 				c.state = CPP_CODE_COUNT_STATE_INIT
+			} else if v != '*' {
+				c.state = CPP_CODE_COUNT_STATE_BLOCK_COMMENT
 			}
 
 		case CPP_CODE_COUNT_STATE_CODE:
@@ -155,6 +159,19 @@ func (c *CppCodeCounter) ParseLine(line string) (stat CodeStat) {
 
 	if hasComment {
 		stat.Comment = 1
+	}
+
+	switch c.state {
+	case CPP_CODE_COUNT_STATE_BLOCK_COMMENT:
+		break
+	case CPP_CODE_COUNT_STATE_BLOCK_COMMENT_STAR:
+		c.state = CPP_CODE_COUNT_STATE_BLOCK_COMMENT
+	case CPP_CODE_COUNT_STATE_STRING:
+		break
+	case CPP_CODE_COUNT_STATE_STRING_ESCAPE:
+		c.state = CPP_CODE_COUNT_STATE_STRING
+	default:
+		c.state = CPP_CODE_COUNT_STATE_INIT
 	}
 
 	return stat

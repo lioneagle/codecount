@@ -1,12 +1,15 @@
-package main
+#include <stdlib>
 
 /* comment1
- */asd
-func main() {
+
+ ***/int x = 1;
+void main() {
 	// comment2
-	a := "\
-	//
-	/*
+	char* a = "\
+	//\
+	/*\
 	"
+	/* tt */ b = "\t\n" "sdsd" /**
+	**/
 	return
 }

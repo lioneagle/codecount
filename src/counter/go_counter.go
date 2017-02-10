@@ -57,7 +57,14 @@ func (c *GoCodeCounter) ParseLine(line string) (stat CodeStat) {
 	line = strings.TrimSpace(line)
 
 	if len(line) == 0 {
-		stat.Blank = 1
+		switch c.state {
+		case GO_CODE_COUNT_STATE_BLOCK_COMMENT:
+			stat.Comment = 1
+		case GO_CODE_COUNT_STATE_BLOCK_STRING:
+			stat.Code = 1
+		default:
+			stat.Blank = 1
+		}
 		return stat
 	}
 
@@ -70,10 +77,6 @@ func (c *GoCodeCounter) ParseLine(line string) (stat CodeStat) {
 
 	for _, v := range line {
 		if c.state == GO_CODE_COUNT_STATE_LINE_COMMENT {
-			break
-		}
-
-		if hasCode && hasComment {
 			break
 		}
 
@@ -125,6 +128,8 @@ func (c *GoCodeCounter) ParseLine(line string) (stat CodeStat) {
 		case GO_CODE_COUNT_STATE_BLOCK_COMMENT_STAR:
 			if v == '/' {
 				c.state = GO_CODE_COUNT_STATE_INIT
+			} else if v != '*' {
+				c.state = GO_CODE_COUNT_STATE_BLOCK_COMMENT
 			}
 
 		case GO_CODE_COUNT_STATE_CODE:
@@ -168,6 +173,17 @@ func (c *GoCodeCounter) ParseLine(line string) (stat CodeStat) {
 
 	if hasComment {
 		stat.Comment = 1
+	}
+
+	switch c.state {
+	case GO_CODE_COUNT_STATE_BLOCK_COMMENT:
+		break
+	case GO_CODE_COUNT_STATE_BLOCK_COMMENT_STAR:
+		c.state = GO_CODE_COUNT_STATE_BLOCK_COMMENT
+	case GO_CODE_COUNT_STATE_BLOCK_STRING:
+		break
+	default:
+		c.state = GO_CODE_COUNT_STATE_INIT
 	}
 
 	return stat
