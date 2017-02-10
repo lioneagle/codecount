@@ -12,7 +12,7 @@ type CodeStat struct {
 }
 
 func (c *CodeStat) String() string {
-	return fmt.Sprintf("Total = %d, Code = %d, Comment = %d, Blank = %d, CommentPercent = %.2f%%",
+	return fmt.Sprintf("Total = %6d, Code = %6d, Comment = %6d, Blank = %6d, CommentPercent = %2.2f%%",
 		c.Total, c.Code, c.Comment, c.Blank, c.CommentPercent())
 }
 

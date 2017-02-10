@@ -11,9 +11,10 @@ import (
 )
 
 type fileInfo struct {
-	filename string
-	codetype string
-	stat     counter.CodeStat
+	filename  string
+	shortname string
+	codetype  string
+	stat      counter.CodeStat
 }
 
 type fileList struct {
@@ -28,7 +29,7 @@ func getFiles(root string, filters []string, files *fileList) error {
 
 		for _, v := range filters {
 			if ok, _ := filepath.Match(v, f.Name()); ok {
-				fileinfo := &fileInfo{filename: path}
+				fileinfo := &fileInfo{filename: path, shortname: filepath.Base(path)}
 				files.data = append(files.data, fileinfo)
 			}
 		}
@@ -71,6 +72,12 @@ func NewCodeTypeStats() *CodeTypeStats {
 	return &CodeTypeStats{maps: make(map[string]*CodeTypeStat)}
 }
 
+func printIdent(num int) {
+	for i := 0; i < num; i++ {
+		fmt.Printf(" ")
+	}
+}
+
 func main() {
 
 	codeConfig := []struct {
@@ -86,6 +93,7 @@ func main() {
 	root := flag.String("path", ".", "path for code")
 	filter := flag.String("filter", "*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc;*.c;*.h;*.go", "file filters")
 	showEachFile := flag.Bool("show", false, "disable show each file stat")
+	showShortName := flag.Bool("short", true, "show file name without path")
 
 	exts := make([]*string, 0)
 	for _, v := range codeConfig {
@@ -114,6 +122,8 @@ func main() {
 
 	totlStat := &counter.CodeStat{}
 
+	maxFileNameLen := 0
+
 	for _, v := range files.data {
 		v.codetype = strings.ToLower(filepath.Ext(v.filename)[1:])
 		codetype, ok := codetypeMap.maps[v.codetype]
@@ -133,6 +143,19 @@ func main() {
 			log.Printf("ERROR: parse file %s failed", v.filename)
 		}
 		totlStat.Add(&stat)
+		v.stat = stat
+
+		if *showEachFile {
+			if *showShortName {
+				if len(v.shortname) > maxFileNameLen {
+					maxFileNameLen = len(v.shortname)
+				}
+			} else {
+				if len(v.filename) > maxFileNameLen {
+					maxFileNameLen = len(v.filename)
+				}
+			}
+		}
 
 		codetypeStat, ok := codetypeStats.maps[codetype]
 		if !ok {
@@ -142,16 +165,46 @@ func main() {
 
 		codetypeStat.filenum++
 		codetypeStat.stat.Add(&stat)
+	}
 
-		if *showEachFile {
-			fmt.Printf("%s: %s\n", v.filename, stat.String())
+	for _, v := range codeConfig {
+		if codetypeStats.maps[v.name].filenum > 0 {
+			str := fmt.Sprintf("total %d %s files", codetypeStats.maps[v.name].filenum, v.name)
+			if len(str) > maxFileNameLen {
+				maxFileNameLen = len(str)
+			}
+		}
+	}
+
+	str := fmt.Sprintf("total %d files", len(files.data))
+	if len(str) > maxFileNameLen {
+		maxFileNameLen = len(str)
+	}
+
+	if *showEachFile {
+		for _, v := range files.data {
+			if *showShortName {
+				fmt.Printf("%s:  ", v.shortname)
+				printIdent(maxFileNameLen - len(v.shortname))
+			} else {
+				fmt.Printf("%s:  ", v.filename)
+				printIdent(maxFileNameLen - len(v.filename))
+			}
+			fmt.Printf("%s\n", v.stat.String())
 		}
 	}
 
 	for _, v := range codeConfig {
 		if codetypeStats.maps[v.name].filenum > 0 {
-			fmt.Printf("total %d %s files: %s\n", codetypeStats.maps[v.name].filenum, v.name, codetypeStats.maps[v.name].stat.String())
+			str := fmt.Sprintf("total %d %s files", codetypeStats.maps[v.name].filenum, v.name)
+			fmt.Printf("%s:  ", str)
+			printIdent(maxFileNameLen - len(str))
+			fmt.Printf("%s\n", codetypeStats.maps[v.name].stat.String())
 		}
 	}
-	fmt.Printf("total %d files: %s\n", len(files.data), totlStat.String())
+
+	str = fmt.Sprintf("total %d files", len(files.data))
+	fmt.Printf("%s:  ", str)
+	printIdent(maxFileNameLen - len(str))
+	fmt.Printf("%s\n", totlStat.String())
 }
