@@ -389,7 +389,7 @@ func OutputToCsvFile(files FileList, runConfig *RunConfig, allStats *AllStats) {
 		if runConfig.showShortName {
 			line = append(line, v.shortName)
 		} else {
-			line = append(line, v.shortName)
+			line = append(line, v.fileName)
 		}
 		line = append(line, v.stat.StringSlice()...)
 		w.Write(line)
