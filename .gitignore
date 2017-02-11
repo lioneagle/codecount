@@ -16,6 +16,7 @@ bin
 *_coverage.html
 *_cpu.out
 test_temp
+*.csv
 
 # C extensions
 *.so

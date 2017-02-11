@@ -2,6 +2,7 @@ package main
 
 import (
 	"counter"
+	"encoding/csv"
 	"flag"
 	"fmt"
 	"log"
@@ -66,7 +67,7 @@ func (f FileList) GetFileNameMaxLen() (fullNameMaxLen, shortNameMaxLen int) {
 	return fullNameMaxLen, shortNameMaxLen
 }
 
-func getFiles(root string, filters []string, files *FileList) error {
+func GetFiles(root string, filters []string, files *FileList) error {
 	walkFunc := func(path string, f os.FileInfo, err error) error {
 		if f.IsDir() {
 			return nil
@@ -112,7 +113,10 @@ type RunConfig struct {
 	sortStat      bool
 	sortField     string
 	sortReverse   bool
-	exts          []*string
+	csvOutput     bool
+	csvFileName   string
+
+	exts []*string
 }
 
 func (runConfig *RunConfig) Parse(codeConfigs []CodeConfig) {
@@ -123,6 +127,8 @@ func (runConfig *RunConfig) Parse(codeConfigs []CodeConfig) {
 	flag.BoolVar(&runConfig.sortStat, "sort", true, "sort stat result")
 	flag.StringVar(&runConfig.sortField, "sortfield", "name", "set sort field: name, total, code, comment, blank, comment-percent")
 	flag.BoolVar(&runConfig.sortReverse, "reverse", true, "sort reverse")
+	flag.BoolVar(&runConfig.csvOutput, "csvoutput", true, "enable to output csv file")
+	flag.StringVar(&runConfig.csvFileName, "csvfilename", "result.csv", "csv file name")
 
 	flag.Parse()
 
@@ -156,27 +162,38 @@ type AllStats struct {
 	totalStat     counter.CodeStat
 	codeTypeStats map[string]*CodeTypeStat
 	codeTypeOrder []string
+	maxPrefixLen  int
+	totalFiles    int
 }
 
 func NewAllStats() *AllStats {
 	return &AllStats{codeTypeStats: make(map[string]*CodeTypeStat)}
 }
 
-func (allStats *AllStats) getMaxPrefixLen(files FileList, maxPrefixLen int) int {
+func (allStats *AllStats) getMaxPrefixLen(files FileList, runConfig *RunConfig) {
+	allStats.maxPrefixLen = 0
+	if runConfig.showEachFile {
+		fullNameMaxLen, shortNameMaxLen := files.GetFileNameMaxLen()
+		if runConfig.showShortName {
+			allStats.maxPrefixLen = shortNameMaxLen
+		} else {
+			allStats.maxPrefixLen = fullNameMaxLen
+		}
+	}
+
 	for k, v := range allStats.codeTypeStats {
 		if v.filenum > 0 {
 			str := fmt.Sprintf("total %d %s files", v.filenum, k)
-			if len(str) > maxPrefixLen {
-				maxPrefixLen = len(str)
+			if len(str) > allStats.maxPrefixLen {
+				allStats.maxPrefixLen = len(str)
 			}
 		}
 	}
 
 	str := fmt.Sprintf("total %d files", len(files))
-	if len(str) > maxPrefixLen {
-		maxPrefixLen = len(str)
+	if len(str) > allStats.maxPrefixLen {
+		allStats.maxPrefixLen = len(str)
 	}
-	return maxPrefixLen
 }
 
 func (allStats *AllStats) AddCodeType(codetype string) {
@@ -196,24 +213,42 @@ func (allStats *AllStats) AddStat(codetype string, stat *counter.CodeStat) {
 
 	codetypeStat.filenum++
 	codetypeStat.stat.Add(stat)
+
+	allStats.totalFiles++
 }
 
-func (allStats *AllStats) Print(maxPrefixLen, totalFiles int) {
+func (allStats *AllStats) Print() (ret string) {
 
 	for _, v := range allStats.codeTypeOrder {
 		codeTypeStat, _ := allStats.codeTypeStats[v]
 		if codeTypeStat.filenum > 0 {
 			str := fmt.Sprintf("total %d %s files", codeTypeStat.filenum, v)
-			fmt.Printf("%s:  ", str)
-			printIdent(maxPrefixLen - len(str))
-			fmt.Printf("%s\n", codeTypeStat.stat.String())
+			ret += fmt.Sprintf("%s:  ", str)
+			ret += PrintIdent(allStats.maxPrefixLen - len(str))
+			ret += fmt.Sprintf("%s\n", codeTypeStat.stat.String())
 		}
 	}
 
-	str := fmt.Sprintf("total %d files", totalFiles)
-	fmt.Printf("%s:  ", str)
-	printIdent(maxPrefixLen - len(str))
-	fmt.Printf("%s\n", allStats.totalStat.String())
+	str := fmt.Sprintf("total %d files", allStats.totalFiles)
+	ret += fmt.Sprintf("%s:  ", str)
+	ret += PrintIdent(allStats.maxPrefixLen - len(str))
+	ret += fmt.Sprintf("%s\n", allStats.totalStat.String())
+	return ret
+}
+
+func (allStats *AllStats) WriteToCsvFile(w *csv.Writer) {
+	for _, v := range allStats.codeTypeOrder {
+		codeTypeStat, _ := allStats.codeTypeStats[v]
+		if codeTypeStat.filenum > 0 {
+			line := []string{fmt.Sprintf("total %d %s files", codeTypeStat.filenum, v)}
+			line = append(line, codeTypeStat.stat.StringSlice()...)
+			w.Write(line)
+		}
+	}
+
+	line := []string{fmt.Sprintf("total %d files", allStats.totalFiles)}
+	line = append(line, allStats.totalStat.StringSlice()...)
+	w.Write(line)
 }
 
 func main() {
@@ -238,11 +273,10 @@ func main() {
 	}
 
 	files := FileList{}
-	getFiles(runConfig.root, strings.Split(runConfig.filter, ";"), &files)
+	GetFiles(runConfig.root, strings.Split(runConfig.filter, ";"), &files)
 
 	Run(files, extMapToCodeType, allStats)
-
-	PrintResult(files, &runConfig, allStats)
+	OutputResult(files, &runConfig, allStats)
 }
 
 func Run(files FileList, extMapToCodeType *ExtMapToCodeType, allStats *AllStats) {
@@ -272,27 +306,29 @@ func Run(files FileList, extMapToCodeType *ExtMapToCodeType, allStats *AllStats)
 	}
 }
 
-func PrintResult(files FileList, runConfig *RunConfig, allStats *AllStats) {
-	maxPrefixLen := getMaxPrefixLen(files, runConfig, allStats)
+func PrintResult(files FileList, runConfig *RunConfig, allStats *AllStats) (ret string) {
+	allStats.getMaxPrefixLen(files, runConfig)
 
 	if runConfig.showEachFile {
 		SortResult(files, runConfig)
 
 		for _, v := range files {
 			if runConfig.showShortName {
-				fmt.Printf("%s:  ", v.shortName)
-				printIdent(maxPrefixLen - len(v.shortName))
+				ret += fmt.Sprintf("%s:  ", v.shortName)
+				ret += PrintIdent(allStats.maxPrefixLen - len(v.shortName))
 			} else {
-				fmt.Printf("%s:  ", v.fileName)
-				printIdent(maxPrefixLen - len(v.fileName))
+				ret += fmt.Sprintf("%s:  ", v.fileName)
+				ret += PrintIdent(allStats.maxPrefixLen - len(v.fileName))
 			}
-			fmt.Printf("%s\n", v.stat.String())
+			ret += fmt.Sprintf("%s\n", v.stat.String())
 		}
 	}
 
-	fmt.Printf("\n")
-	allStats.Print(maxPrefixLen, len(files))
-	fmt.Printf("\n")
+	ret += "\n"
+	ret += allStats.Print()
+	ret += "\n"
+
+	return ret
 }
 
 func SortResult(files FileList, runConfig *RunConfig) {
@@ -328,21 +364,45 @@ func SortResult(files FileList, runConfig *RunConfig) {
 	}
 }
 
-func getMaxPrefixLen(files FileList, runConfig *RunConfig, stats *AllStats) (maxPrefixLen int) {
-	if runConfig.showEachFile {
-		fullNameMaxLen, shortNameMaxLen := files.GetFileNameMaxLen()
-		if runConfig.showShortName {
-			maxPrefixLen = shortNameMaxLen
-		} else {
-			maxPrefixLen = fullNameMaxLen
-		}
-	}
+func OutputResult(files FileList, runConfig *RunConfig, allStats *AllStats) {
+	ret := PrintResult(files, runConfig, allStats)
+	fmt.Printf("%s", ret)
 
-	return stats.getMaxPrefixLen(files, maxPrefixLen)
+	if runConfig.csvOutput {
+		OutputToCsvFile(files, runConfig, allStats)
+	}
 }
 
-func printIdent(num int) {
-	for i := 0; i < num; i++ {
-		fmt.Printf(" ")
+func OutputToCsvFile(files FileList, runConfig *RunConfig, allStats *AllStats) {
+	file, err := os.OpenFile(runConfig.csvFileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		log.Printf("ERROR: cannot open csv file %s to write", runConfig.csvFileName)
+		return
 	}
+	//file.WriteString("test")
+	defer file.Close()
+
+	w := csv.NewWriter(file)
+	w.Write([]string{"FileName", "Total", "Code", "Comment", "Blank", "CommentPercent"})
+	for _, v := range files {
+		line := []string{}
+		if runConfig.showShortName {
+			line = append(line, v.shortName)
+		} else {
+			line = append(line, v.shortName)
+		}
+		line = append(line, v.stat.StringSlice()...)
+		w.Write(line)
+	}
+
+	allStats.WriteToCsvFile(w)
+
+	w.Flush()
+}
+
+func PrintIdent(num int) (ret string) {
+	for i := 0; i < num; i++ {
+		ret += " "
+	}
+	return ret
 }

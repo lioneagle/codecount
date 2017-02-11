@@ -2,6 +2,7 @@ package counter
 
 import (
 	"fmt"
+	"strconv"
 )
 
 type CodeStat struct {
@@ -11,23 +12,34 @@ type CodeStat struct {
 	Blank   int
 }
 
-func (c *CodeStat) String() string {
+func (codeStat *CodeStat) String() string {
 	return fmt.Sprintf("Total = %6d, Code = %6d, Comment = %6d, Blank = %6d, CommentPercent = %2.2f%%",
-		c.Total, c.Code, c.Comment, c.Blank, c.CommentPercent())
+		codeStat.Total, codeStat.Code, codeStat.Comment, codeStat.Blank, codeStat.CommentPercent())
 }
 
-func (c *CodeStat) Add(rhs *CodeStat) {
-	c.Total += rhs.Total
-	c.Code += rhs.Code
-	c.Comment += rhs.Comment
-	c.Blank += rhs.Blank
+func (codeStat *CodeStat) StringSlice() []string {
+	return []string{
+		strconv.Itoa(codeStat.Total),
+		strconv.Itoa(codeStat.Code),
+		strconv.Itoa(codeStat.Comment),
+		strconv.Itoa(codeStat.Blank),
+		fmt.Sprintf("%2.2f%%", codeStat.CommentPercent()),
+	}
+
 }
 
-func (c *CodeStat) CommentPercent() float64 {
-	if (c.Code + c.Comment) == 0 {
+func (codeStat *CodeStat) Add(rhs *CodeStat) {
+	codeStat.Total += rhs.Total
+	codeStat.Code += rhs.Code
+	codeStat.Comment += rhs.Comment
+	codeStat.Blank += rhs.Blank
+}
+
+func (codeStat *CodeStat) CommentPercent() float64 {
+	if (codeStat.Code + codeStat.Comment) == 0 {
 		return 0.0
 	}
-	return float64(c.Comment) / float64(c.Code+c.Comment) * 100
+	return float64(codeStat.Comment) / float64(codeStat.Code+codeStat.Comment) * 100
 }
 
 type CodeCounter interface {
