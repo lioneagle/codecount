@@ -11,49 +11,62 @@ import (
 	"strings"
 )
 
-type fileInfo struct {
-	filename  string
-	shortname string
-	codetype  string
+type FileInfo struct {
+	fileName  string
+	shortName string
+	ext       string
 	stat      counter.CodeStat
 }
 
-type fileList []*fileInfo
+type FileList []*FileInfo
 
-func (f fileList) Len() int      { return len(f) }
-func (f fileList) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
+func (files FileList) Len() int      { return len(files) }
+func (files FileList) Swap(i, j int) { files[i], files[j] = files[j], files[i] }
 
-type byFullName struct{ fileList }
+type ByFullName struct{ FileList }
 
-func (s byFullName) Less(i, j int) bool { return s.fileList[i].filename < s.fileList[j].filename }
+func (s ByFullName) Less(i, j int) bool { return s.FileList[i].fileName < s.FileList[j].fileName }
 
-type byShortName struct{ fileList }
+type ByShortName struct{ FileList }
 
-func (s byShortName) Less(i, j int) bool { return s.fileList[i].shortname < s.fileList[j].shortname }
+func (s ByShortName) Less(i, j int) bool { return s.FileList[i].shortName < s.FileList[j].shortName }
 
-type byTotal struct{ fileList }
+type ByTotal struct{ FileList }
 
-func (s byTotal) Less(i, j int) bool { return s.fileList[i].stat.Total < s.fileList[j].stat.Total }
+func (s ByTotal) Less(i, j int) bool { return s.FileList[i].stat.Total < s.FileList[j].stat.Total }
 
-type byCode struct{ fileList }
+type ByCode struct{ FileList }
 
-func (s byCode) Less(i, j int) bool { return s.fileList[i].stat.Code < s.fileList[j].stat.Code }
+func (s ByCode) Less(i, j int) bool { return s.FileList[i].stat.Code < s.FileList[j].stat.Code }
 
-type byComment struct{ fileList }
+type ByComment struct{ FileList }
 
-func (s byComment) Less(i, j int) bool { return s.fileList[i].stat.Comment < s.fileList[j].stat.Comment }
+func (s ByComment) Less(i, j int) bool { return s.FileList[i].stat.Comment < s.FileList[j].stat.Comment }
 
-type byBlank struct{ fileList }
+type ByBlank struct{ FileList }
 
-func (s byBlank) Less(i, j int) bool { return s.fileList[i].stat.Blank < s.fileList[j].stat.Blank }
+func (s ByBlank) Less(i, j int) bool { return s.FileList[i].stat.Blank < s.FileList[j].stat.Blank }
 
-type byCommentPercent struct{ fileList }
+type ByCommentPercent struct{ FileList }
 
-func (s byCommentPercent) Less(i, j int) bool {
-	return s.fileList[i].stat.CommentPercent() < s.fileList[j].stat.CommentPercent()
+func (s ByCommentPercent) Less(i, j int) bool {
+	return s.FileList[i].stat.CommentPercent() < s.FileList[j].stat.CommentPercent()
 }
 
-func getFiles(root string, filters []string, files *fileList) error {
+func (f FileList) GetFileNameMaxLen() (fullNameMaxLen, shortNameMaxLen int) {
+	for _, v := range f {
+		if len(v.fileName) > fullNameMaxLen {
+			fullNameMaxLen = len(v.fileName)
+		}
+
+		if len(v.shortName) > shortNameMaxLen {
+			shortNameMaxLen = len(v.shortName)
+		}
+	}
+	return fullNameMaxLen, shortNameMaxLen
+}
+
+func getFiles(root string, filters []string, files *FileList) error {
 	walkFunc := func(path string, f os.FileInfo, err error) error {
 		if f.IsDir() {
 			return nil
@@ -61,7 +74,8 @@ func getFiles(root string, filters []string, files *fileList) error {
 
 		for _, v := range filters {
 			if ok, _ := filepath.Match(v, f.Name()); ok {
-				fileinfo := &fileInfo{filename: path, shortname: filepath.Base(path)}
+				fileinfo := &FileInfo{fileName: path, shortName: filepath.Base(path)}
+				fileinfo.ext = strings.ToLower(filepath.Ext(path)[1:])
 				*files = append(*files, fileinfo)
 			}
 		}
@@ -71,15 +85,15 @@ func getFiles(root string, filters []string, files *fileList) error {
 	return filepath.Walk(root, walkFunc)
 }
 
-type CodeTypeMap struct {
+type ExtMapToCodeType struct {
 	maps map[string]string
 }
 
-func NewCodeTypeMap() *CodeTypeMap {
-	return &CodeTypeMap{maps: make(map[string]string)}
+func NewExtMapToCodeType() *ExtMapToCodeType {
+	return &ExtMapToCodeType{maps: make(map[string]string)}
 }
 
-func (c *CodeTypeMap) AddCodeType(filters string, codetype string) {
+func (c *ExtMapToCodeType) BindFiltersToCodeType(filters string, codetype string) {
 	ext := strings.Split(filters, ";")
 
 	for _, v := range ext {
@@ -87,8 +101,50 @@ func (c *CodeTypeMap) AddCodeType(filters string, codetype string) {
 			continue
 		}
 		c.maps[strings.ToLower(filepath.Ext(v)[1:])] = strings.ToLower(codetype)
-
 	}
+}
+
+type RunConfig struct {
+	root          string
+	filter        string
+	showEachFile  bool
+	showShortName bool
+	sortStat      bool
+	sortField     string
+	sortReverse   bool
+	exts          []*string
+}
+
+func (runConfig *RunConfig) Parse(codeConfigs []CodeConfig) {
+	flag.StringVar(&runConfig.root, "path", ".", "path for code")
+	flag.StringVar(&runConfig.filter, "filter", "*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc;*.c;*.h;*.go", "file filters")
+	flag.BoolVar(&runConfig.showEachFile, "show", false, "show each file stat")
+	flag.BoolVar(&runConfig.showShortName, "short", true, "show file name without path")
+	flag.BoolVar(&runConfig.sortStat, "sort", true, "sort stat result")
+	flag.StringVar(&runConfig.sortField, "sortfield", "name", "set sort field: name, total, code, comment, blank, comment-percent")
+	flag.BoolVar(&runConfig.sortReverse, "reverse", true, "sort reverse")
+
+	flag.Parse()
+
+	runConfig.exts = make([]*string, 0)
+	for _, v := range codeConfigs {
+		runConfig.exts = append(runConfig.exts, flag.String(v.codeType, v.filters, v.filtersDesc))
+	}
+}
+
+func (runConfig *RunConfig) Check() bool {
+	_, err := os.Stat(runConfig.root)
+	if os.IsNotExist(err) {
+		fmt.Printf("ERROR: path \"%s\" is not exist", runConfig.root)
+		return false
+	}
+	return true
+}
+
+type CodeConfig struct {
+	codeType    string
+	filters     string
+	filtersDesc string
 }
 
 type CodeTypeStat struct {
@@ -96,141 +152,165 @@ type CodeTypeStat struct {
 	stat    counter.CodeStat
 }
 
-type CodeTypeStats struct {
-	maps map[string]*CodeTypeStat
+type AllStats struct {
+	totalStat     counter.CodeStat
+	codeTypeStats map[string]*CodeTypeStat
+	codeTypeOrder []string
 }
 
-func NewCodeTypeStats() *CodeTypeStats {
-	return &CodeTypeStats{maps: make(map[string]*CodeTypeStat)}
+func NewAllStats() *AllStats {
+	return &AllStats{codeTypeStats: make(map[string]*CodeTypeStat)}
 }
 
-func printIdent(num int) {
-	for i := 0; i < num; i++ {
-		fmt.Printf(" ")
-	}
-}
-
-func main() {
-
-	codeConfig := []struct {
-		name          string
-		extConfig     string
-		extConfigDesc string
-	}{
-		{"cpp", "*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc", "extions for c/c++ files"},
-		{"c", "*.c;*.h", "extions for c files"},
-		{"go", "*.go", "extions for go files"},
-	}
-
-	root := flag.String("path", ".", "path for code")
-	filter := flag.String("filter", "*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc;*.c;*.h;*.go", "file filters")
-	showEachFile := flag.Bool("show", false, "show each file stat")
-	showShortName := flag.Bool("short", true, "show file name without path")
-	sortStat := flag.Bool("sort", true, "sort stat result")
-	sortField := flag.String("sortfiled", "name", "set sort field: name, total, code, comment, blank, comment-percent")
-	sortReverse := flag.Bool("reverse", true, "sort reverse")
-
-	exts := make([]*string, 0)
-	for _, v := range codeConfig {
-		exts = append(exts, flag.String(v.name, v.extConfig, v.extConfigDesc))
-	}
-
-	flag.Parse()
-
-	_, err := os.Stat(*root)
-	if os.IsNotExist(err) {
-		fmt.Printf("ERROR: path \"%s\" is not exist", *root)
-		return
-	}
-
-	codetypeMap := NewCodeTypeMap()
-	codetypeStats := NewCodeTypeStats()
-	for i, v := range codeConfig {
-		codetypeMap.AddCodeType(*exts[i], v.name)
-		codetypeStats.maps[v.name] = &CodeTypeStat{}
-	}
-
-	factory := counter.NewCodeCounterFactory()
-
-	files := fileList{}
-	getFiles(*root, strings.Split(*filter, ";"), &files)
-
-	totlStat := &counter.CodeStat{}
-
-	maxFileNameLen := 0
-
-	for _, v := range files {
-		v.codetype = strings.ToLower(filepath.Ext(v.filename)[1:])
-		codetype, ok := codetypeMap.maps[v.codetype]
-		if !ok {
-			log.Printf("ERROR: unknown code type for %s", v.filename)
-			continue
-		}
-
-		c, ok := factory.NewCounter(codetype)
-		if !ok {
-			log.Printf("ERROR: cannot get codecounter for %s", v.filename)
-			continue
-		}
-
-		stat, ok := c.ParseFile(v.filename)
-		if !ok {
-			log.Printf("ERROR: parse file %s failed", v.filename)
-		}
-		totlStat.Add(&stat)
-		v.stat = stat
-
-		if *showEachFile {
-			if *showShortName {
-				if len(v.shortname) > maxFileNameLen {
-					maxFileNameLen = len(v.shortname)
-				}
-			} else {
-				if len(v.filename) > maxFileNameLen {
-					maxFileNameLen = len(v.filename)
-				}
-			}
-		}
-
-		codetypeStat, ok := codetypeStats.maps[codetype]
-		if !ok {
-			codetypeStat = &CodeTypeStat{}
-			codetypeStats.maps[codetype] = codetypeStat
-		}
-
-		codetypeStat.filenum++
-		codetypeStat.stat.Add(&stat)
-	}
-
-	for _, v := range codeConfig {
-		if codetypeStats.maps[v.name].filenum > 0 {
-			str := fmt.Sprintf("total %d %s files", codetypeStats.maps[v.name].filenum, v.name)
-			if len(str) > maxFileNameLen {
-				maxFileNameLen = len(str)
+func (allStats *AllStats) getMaxPrefixLen(files FileList, maxPrefixLen int) int {
+	for k, v := range allStats.codeTypeStats {
+		if v.filenum > 0 {
+			str := fmt.Sprintf("total %d %s files", v.filenum, k)
+			if len(str) > maxPrefixLen {
+				maxPrefixLen = len(str)
 			}
 		}
 	}
 
 	str := fmt.Sprintf("total %d files", len(files))
-	if len(str) > maxFileNameLen {
-		maxFileNameLen = len(str)
+	if len(str) > maxPrefixLen {
+		maxPrefixLen = len(str)
+	}
+	return maxPrefixLen
+}
+
+func (allStats *AllStats) AddCodeType(codetype string) {
+	allStats.codeTypeStats[codetype] = &CodeTypeStat{}
+	allStats.codeTypeOrder = append(allStats.codeTypeOrder, codetype)
+}
+
+func (allStats *AllStats) AddStat(codetype string, stat *counter.CodeStat) {
+
+	allStats.totalStat.Add(stat)
+
+	codetypeStat, ok := allStats.codeTypeStats[codetype]
+	if !ok {
+		codetypeStat = &CodeTypeStat{}
+		allStats.codeTypeStats[codetype] = codetypeStat
 	}
 
-	if *showEachFile {
-		sortobject := map[string]sort.Interface{
-			"fullname":        byFullName{files},
-			"shortname":       byShortName{files},
-			"total":           byTotal{files},
-			"code":            byCode{files},
-			"comment":         byComment{files},
-			"blank":           byBlank{files},
-			"comment-percent": byCommentPercent{files},
+	codetypeStat.filenum++
+	codetypeStat.stat.Add(stat)
+}
+
+func (allStats *AllStats) Print(maxPrefixLen, totalFiles int) {
+
+	for _, v := range allStats.codeTypeOrder {
+		codeTypeStat, _ := allStats.codeTypeStats[v]
+		if codeTypeStat.filenum > 0 {
+			str := fmt.Sprintf("total %d %s files", codeTypeStat.filenum, v)
+			fmt.Printf("%s:  ", str)
+			printIdent(maxPrefixLen - len(str))
+			fmt.Printf("%s\n", codeTypeStat.stat.String())
+		}
+	}
+
+	str := fmt.Sprintf("total %d files", totalFiles)
+	fmt.Printf("%s:  ", str)
+	printIdent(maxPrefixLen - len(str))
+	fmt.Printf("%s\n", allStats.totalStat.String())
+}
+
+func main() {
+
+	codeConfigs := []CodeConfig{
+		{"cpp", "*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc", "extions for c/c++ files"},
+		{"c", "*.c;*.h", "extions for c files"},
+		{"go", "*.go", "extions for go files"},
+	}
+
+	runConfig := RunConfig{}
+	runConfig.Parse(codeConfigs)
+	if !runConfig.Check() {
+		return
+	}
+
+	allStats := NewAllStats()
+	extMapToCodeType := NewExtMapToCodeType()
+	for _, v := range codeConfigs {
+		extMapToCodeType.BindFiltersToCodeType(v.filters, v.codeType)
+		allStats.AddCodeType(v.codeType)
+	}
+
+	files := FileList{}
+	getFiles(runConfig.root, strings.Split(runConfig.filter, ";"), &files)
+
+	Run(files, extMapToCodeType, allStats)
+
+	PrintResult(files, &runConfig, allStats)
+}
+
+func Run(files FileList, extMapToCodeType *ExtMapToCodeType, allStats *AllStats) {
+	factory := counter.NewCodeCounterFactory()
+
+	for _, v := range files {
+		codeType, ok := extMapToCodeType.maps[v.ext]
+		if !ok {
+			log.Printf("ERROR: unknown code type for %s", v.fileName)
+			continue
 		}
 
-		if *sortStat {
-			name := strings.ToLower(*sortField)
+		c, ok := factory.NewCounter(codeType)
+		if !ok {
+			log.Printf("ERROR: cannot get codecounter for %s", v.fileName)
+			continue
+		}
+
+		stat, ok := c.ParseFile(v.fileName)
+		if !ok {
+			log.Printf("ERROR: parse file %s failed", v.fileName)
+		}
+
+		v.stat = stat
+		allStats.AddStat(codeType, &stat)
+
+	}
+}
+
+func PrintResult(files FileList, runConfig *RunConfig, allStats *AllStats) {
+	maxPrefixLen := getMaxPrefixLen(files, runConfig, allStats)
+
+	if runConfig.showEachFile {
+		SortResult(files, runConfig)
+
+		for _, v := range files {
+			if runConfig.showShortName {
+				fmt.Printf("%s:  ", v.shortName)
+				printIdent(maxPrefixLen - len(v.shortName))
+			} else {
+				fmt.Printf("%s:  ", v.fileName)
+				printIdent(maxPrefixLen - len(v.fileName))
+			}
+			fmt.Printf("%s\n", v.stat.String())
+		}
+	}
+
+	fmt.Printf("\n")
+	allStats.Print(maxPrefixLen, len(files))
+	fmt.Printf("\n")
+}
+
+func SortResult(files FileList, runConfig *RunConfig) {
+	if runConfig.showEachFile {
+		sortobject := map[string]sort.Interface{
+			"fullname":        ByFullName{files},
+			"shortname":       ByShortName{files},
+			"total":           ByTotal{files},
+			"code":            ByCode{files},
+			"comment":         ByComment{files},
+			"blank":           ByBlank{files},
+			"comment-percent": ByCommentPercent{files},
+		}
+
+		if runConfig.sortStat {
+			name := strings.ToLower(runConfig.sortField)
 			if name == "name" {
-				if *showShortName {
+				if runConfig.showShortName {
 					name = "shortname"
 				} else {
 					name = "fullname"
@@ -238,38 +318,31 @@ func main() {
 			}
 			v, ok := sortobject[name]
 			if ok {
-				if *sortReverse {
+				if runConfig.sortReverse {
 					sort.Sort(sort.Reverse(v))
 				} else {
 					sort.Sort(v)
 				}
 			}
 		}
+	}
+}
 
-		for _, v := range files {
-			if *showShortName {
-				fmt.Printf("%s:  ", v.shortname)
-				printIdent(maxFileNameLen - len(v.shortname))
-			} else {
-				fmt.Printf("%s:  ", v.filename)
-				printIdent(maxFileNameLen - len(v.filename))
-			}
-			fmt.Printf("%s\n", v.stat.String())
+func getMaxPrefixLen(files FileList, runConfig *RunConfig, stats *AllStats) (maxPrefixLen int) {
+	if runConfig.showEachFile {
+		fullNameMaxLen, shortNameMaxLen := files.GetFileNameMaxLen()
+		if runConfig.showShortName {
+			maxPrefixLen = shortNameMaxLen
+		} else {
+			maxPrefixLen = fullNameMaxLen
 		}
 	}
 
-	fmt.Printf("\n")
-	for _, v := range codeConfig {
-		if codetypeStats.maps[v.name].filenum > 0 {
-			str := fmt.Sprintf("total %d %s files", codetypeStats.maps[v.name].filenum, v.name)
-			fmt.Printf("%s:  ", str)
-			printIdent(maxFileNameLen - len(str))
-			fmt.Printf("%s\n", codetypeStats.maps[v.name].stat.String())
-		}
-	}
+	return stats.getMaxPrefixLen(files, maxPrefixLen)
+}
 
-	str = fmt.Sprintf("total %d files", len(files))
-	fmt.Printf("%s:  ", str)
-	printIdent(maxFileNameLen - len(str))
-	fmt.Printf("%s\n", totlStat.String())
+func printIdent(num int) {
+	for i := 0; i < num; i++ {
+		fmt.Printf(" ")
+	}
 }
