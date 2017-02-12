@@ -308,10 +308,8 @@ func Run(files FileList, extMapToCodeType *ExtMapToCodeType, allStats *AllStats)
 
 func PrintResult(files FileList, runConfig *RunConfig, allStats *AllStats) (ret string) {
 	allStats.getMaxPrefixLen(files, runConfig)
-
+	SortResult(files, runConfig)
 	if runConfig.showEachFile {
-		SortResult(files, runConfig)
-
 		for _, v := range files {
 			if runConfig.showShortName {
 				ret += fmt.Sprintf("%s:  ", v.shortName)
@@ -322,9 +320,10 @@ func PrintResult(files FileList, runConfig *RunConfig, allStats *AllStats) (ret 
 			}
 			ret += fmt.Sprintf("%s\n", v.stat.String())
 		}
+
+		ret += "\n"
 	}
 
-	ret += "\n"
 	ret += allStats.Print()
 	ret += "\n"
 
@@ -332,33 +331,31 @@ func PrintResult(files FileList, runConfig *RunConfig, allStats *AllStats) (ret 
 }
 
 func SortResult(files FileList, runConfig *RunConfig) {
-	if runConfig.showEachFile {
-		sortobject := map[string]sort.Interface{
-			"fullname":        ByFullName{files},
-			"shortname":       ByShortName{files},
-			"total":           ByTotal{files},
-			"code":            ByCode{files},
-			"comment":         ByComment{files},
-			"blank":           ByBlank{files},
-			"comment-percent": ByCommentPercent{files},
-		}
+	sortobject := map[string]sort.Interface{
+		"fullname":        ByFullName{files},
+		"shortname":       ByShortName{files},
+		"total":           ByTotal{files},
+		"code":            ByCode{files},
+		"comment":         ByComment{files},
+		"blank":           ByBlank{files},
+		"comment-percent": ByCommentPercent{files},
+	}
 
-		if runConfig.sortStat {
-			name := strings.ToLower(runConfig.sortField)
-			if name == "name" {
-				if runConfig.showShortName {
-					name = "shortname"
-				} else {
-					name = "fullname"
-				}
+	if runConfig.sortStat {
+		name := strings.ToLower(runConfig.sortField)
+		if name == "name" {
+			if runConfig.showShortName {
+				name = "shortname"
+			} else {
+				name = "fullname"
 			}
-			v, ok := sortobject[name]
-			if ok {
-				if runConfig.sortReverse {
-					sort.Sort(sort.Reverse(v))
-				} else {
-					sort.Sort(v)
-				}
+		}
+		v, ok := sortobject[name]
+		if ok {
+			if runConfig.sortReverse {
+				sort.Sort(sort.Reverse(v))
+			} else {
+				sort.Sort(v)
 			}
 		}
 	}
