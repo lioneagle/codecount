@@ -5,8 +5,8 @@ package main
  ***/
 func main() {
 	// comment2
-	b := ('"' /* */
-	d := /'/'
+	b := "a" + '"' /* */
+	d := 3
 	/*
 	 */
 	a := `

@@ -2,7 +2,7 @@ package counter
 
 import (
 	//"fmt"
-	//"os"
+	"os"
 	//"path/filepath"
 	"testing"
 )
@@ -43,11 +43,7 @@ func TestGoCodeCounterParseLine(t *testing.T) {
 }
 
 func TestGoCodeCounterParseFile(t *testing.T) {
-	//dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	//fmt.Printf("arg[0] = %s, dir = %s\n", os.Args[0], dir)
-
-	//filename := "testdata/test1.go"
-	filename := "F:/dev/go_code/src/codecount/src/testdata/test1.go"
+	filename := os.Args[len(os.Args)-1] + "\\src\\testdata\\test1.go"
 
 	counter, _ := NewCodeCounterFactory().NewCounter("go")
 	wanted := CodeStat{Total: 21, Code: 13, Comment: 9, Blank: 1}
