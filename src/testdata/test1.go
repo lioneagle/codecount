@@ -5,13 +5,17 @@ package main
  ***/
 func main() {
 	// comment2
+	b := ('"' /* */
+	d := /'/'
+	/*
+	 */
 	a := `
 	
 	\r
 	//
 	/*
 	`
-	/* tt */ b := "\t\n" /**
-	**/
+	/* tt */ c := "\t\n" /**
+	**a **/
 	return
 }

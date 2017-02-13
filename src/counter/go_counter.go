@@ -19,6 +19,8 @@ const (
 	GO_CODE_COUNT_STATE_LINE_STRING        = 6
 	GO_CODE_COUNT_STATE_LINE_STRING_ESCAPE = 7
 	GO_CODE_COUNT_STATE_BLOCK_STRING       = 8
+	GO_CODE_COUNT_STATE_CHAR               = 9
+	GO_CODE_COUNT_STATE_CHAR_ESCAPE        = 10
 )
 
 type GoCodeCounter struct {
@@ -48,6 +50,7 @@ func (c *GoCodeCounter) ParseFile(filename string) (stat CodeStat, ok bool) {
 		}
 		lineStat := c.ParseLine(line)
 		stat.Add(&lineStat)
+		//fmt.Printf("line = %s\nlineStat = %s, state = %d\n", strings.TrimSpace(line), lineStat.String(), c.state)
 	}
 	return stat, true
 }
@@ -95,6 +98,9 @@ func (c *GoCodeCounter) ParseLine(line string) (stat CodeStat) {
 			case '`':
 				c.state = GO_CODE_COUNT_STATE_BLOCK_STRING
 				hasCode = true
+			case '\'':
+				c.state = GO_CODE_COUNT_STATE_CHAR
+				hasCode = true
 			default:
 				c.state = GO_CODE_COUNT_STATE_CODE
 				hasCode = true
@@ -113,6 +119,9 @@ func (c *GoCodeCounter) ParseLine(line string) (stat CodeStat) {
 				hasCode = true
 			case '`':
 				c.state = GO_CODE_COUNT_STATE_BLOCK_STRING
+				hasCode = true
+			case '\'':
+				c.state = GO_CODE_COUNT_STATE_CHAR
 				hasCode = true
 			default:
 				c.state = GO_CODE_COUNT_STATE_CODE
@@ -146,6 +155,9 @@ func (c *GoCodeCounter) ParseLine(line string) (stat CodeStat) {
 			case '`':
 				c.state = GO_CODE_COUNT_STATE_BLOCK_STRING
 				hasCode = true
+			case '\'':
+				c.state = GO_CODE_COUNT_STATE_CHAR
+				hasCode = true
 			}
 
 		case GO_CODE_COUNT_STATE_LINE_STRING:
@@ -156,14 +168,25 @@ func (c *GoCodeCounter) ParseLine(line string) (stat CodeStat) {
 				c.state = GO_CODE_COUNT_STATE_CODE
 			}
 
+		case GO_CODE_COUNT_STATE_LINE_STRING_ESCAPE:
+			c.state = GO_CODE_COUNT_STATE_LINE_STRING
+
 		case GO_CODE_COUNT_STATE_BLOCK_STRING:
 			hasCode = true
 			if v == '`' {
 				c.state = GO_CODE_COUNT_STATE_CODE
 			}
 
-		case GO_CODE_COUNT_STATE_LINE_STRING_ESCAPE:
-			c.state = GO_CODE_COUNT_STATE_LINE_STRING
+		case GO_CODE_COUNT_STATE_CHAR:
+			switch v {
+			case '\\':
+				c.state = GO_CODE_COUNT_STATE_CHAR_ESCAPE
+			case '\'':
+				c.state = GO_CODE_COUNT_STATE_CODE
+			}
+
+		case GO_CODE_COUNT_STATE_CHAR_ESCAPE:
+			c.state = GO_CODE_COUNT_STATE_CHAR
 		}
 	}
 

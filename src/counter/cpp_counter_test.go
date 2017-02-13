@@ -46,7 +46,7 @@ func TestCppCodeCounterParseFile(t *testing.T) {
 	filename := "F:/dev/go_code/src/codecount/src/testdata/test1.cpp"
 
 	counter, _ := NewCodeCounterFactory().NewCounter("cpp")
-	wanted := CodeStat{Total: 15, Code: 10, Comment: 6, Blank: 1}
+	wanted := CodeStat{Total: 20, Code: 13, Comment: 8, Blank: 1}
 
 	stat, ok := counter.ParseFile(filename)
 	if !ok {

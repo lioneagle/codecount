@@ -18,6 +18,8 @@ const (
 	CPP_CODE_COUNT_STATE_CODE               = 5
 	CPP_CODE_COUNT_STATE_STRING             = 6
 	CPP_CODE_COUNT_STATE_STRING_ESCAPE      = 7
+	CPP_CODE_COUNT_STATE_CHAR               = 8
+	CPP_CODE_COUNT_STATE_CHAR_ESCAPE        = 9
 )
 
 type CppCodeCounter struct {
@@ -47,6 +49,8 @@ func (c *CppCodeCounter) ParseFile(filename string) (stat CodeStat, ok bool) {
 		}
 		lineStat := c.ParseLine(line)
 		stat.Add(&lineStat)
+
+		//fmt.Printf("line = %s\nlineStat = %s, state = %d\n", strings.TrimSpace(line), lineStat.String(), c.state)
 	}
 	return stat, true
 }
@@ -74,6 +78,8 @@ func (c *CppCodeCounter) ParseLine(line string) (stat CodeStat) {
 	}
 
 	for _, v := range line {
+		//fmt.Printf("v = %c, state = %d\n", v, c.state)
+
 		if c.state == CPP_CODE_COUNT_STATE_LINE_COMMENT {
 			break
 		}
@@ -90,6 +96,9 @@ func (c *CppCodeCounter) ParseLine(line string) (stat CodeStat) {
 			case '"':
 				c.state = CPP_CODE_COUNT_STATE_STRING
 				hasCode = true
+			case '\'':
+				c.state = CPP_CODE_COUNT_STATE_CHAR
+				hasCode = true
 			default:
 				c.state = CPP_CODE_COUNT_STATE_CODE
 				hasCode = true
@@ -105,6 +114,9 @@ func (c *CppCodeCounter) ParseLine(line string) (stat CodeStat) {
 				hasComment = true
 			case '"':
 				c.state = CPP_CODE_COUNT_STATE_STRING
+				hasCode = true
+			case '\'':
+				c.state = CPP_CODE_COUNT_STATE_CHAR
 				hasCode = true
 			default:
 				c.state = CPP_CODE_COUNT_STATE_CODE
@@ -135,6 +147,9 @@ func (c *CppCodeCounter) ParseLine(line string) (stat CodeStat) {
 			case '"':
 				c.state = CPP_CODE_COUNT_STATE_STRING
 				hasCode = true
+			case '\'':
+				c.state = CPP_CODE_COUNT_STATE_CHAR
+				hasCode = true
 			}
 
 		case CPP_CODE_COUNT_STATE_STRING:
@@ -149,6 +164,19 @@ func (c *CppCodeCounter) ParseLine(line string) (stat CodeStat) {
 
 		case CPP_CODE_COUNT_STATE_STRING_ESCAPE:
 			c.state = CPP_CODE_COUNT_STATE_STRING
+
+		case CPP_CODE_COUNT_STATE_CHAR:
+			hasCode = true
+			switch v {
+			case '\\':
+				c.state = CPP_CODE_COUNT_STATE_CHAR_ESCAPE
+			case '\'':
+				c.state = CPP_CODE_COUNT_STATE_CODE
+				hasCode = true
+			}
+
+		case CPP_CODE_COUNT_STATE_CHAR_ESCAPE:
+			c.state = CPP_CODE_COUNT_STATE_CHAR
 
 		}
 	}
