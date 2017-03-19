@@ -44,13 +44,15 @@ func (c *CppCodeCounter) ParseFile(filename string) (stat CodeStat, ok bool) {
 
 	for {
 		line, err := reader.ReadString('\n')
-		if err != nil || io.EOF == err {
+		if err != nil && io.EOF != err {
 			break
 		}
 		lineStat := c.ParseLine(line)
 		stat.Add(&lineStat)
-
 		//fmt.Printf("line = %s\nlineStat = %s, state = %d\n", strings.TrimSpace(line), lineStat.String(), c.state)
+		if io.EOF == err {
+			break
+		}
 	}
 	return stat, true
 }

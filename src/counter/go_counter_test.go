@@ -46,7 +46,7 @@ func TestGoCodeCounterParseFile(t *testing.T) {
 	filename := os.Args[len(os.Args)-1] + "\\src\\testdata\\test1.go"
 
 	counter, _ := NewCodeCounterFactory().NewCounter("go")
-	wanted := CodeStat{Total: 21, Code: 13, Comment: 9, Blank: 1}
+	wanted := CodeStat{Total: 22, Code: 13, Comment: 9, Blank: 2}
 
 	stat, ok := counter.ParseFile(filename)
 	if !ok {
