@@ -125,7 +125,7 @@ func (runConfig *RunConfig) Parse(codeConfigs []CodeConfig) {
 	flag.BoolVar(&runConfig.showEachFile, "show", false, "show each file stat")
 	flag.BoolVar(&runConfig.showShortName, "short", true, "show file name without path")
 	flag.BoolVar(&runConfig.sortStat, "sort", true, "sort stat result")
-	flag.StringVar(&runConfig.sortField, "sortfield", "code", "set sort field: name, total, code, comment, blank, comment-percent")
+	flag.StringVar(&runConfig.sortField, "sortfield", "code", "set sort field: fullname, shortname, total, code, comment, blank, comment-percent")
 	flag.BoolVar(&runConfig.sortReverse, "reverse", true, "sort reverse")
 	flag.BoolVar(&runConfig.csvOutput, "csv", true, "enable to output csv file")
 	flag.StringVar(&runConfig.csvFileName, "csvfile", "result.csv", "csv file name")
