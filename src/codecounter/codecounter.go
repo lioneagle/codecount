@@ -21,39 +21,6 @@ type FileInfo struct {
 
 type FileList []*FileInfo
 
-func (files FileList) Len() int      { return len(files) }
-func (files FileList) Swap(i, j int) { files[i], files[j] = files[j], files[i] }
-
-type ByFullName struct{ FileList }
-
-func (s ByFullName) Less(i, j int) bool { return s.FileList[i].fileName < s.FileList[j].fileName }
-
-type ByShortName struct{ FileList }
-
-func (s ByShortName) Less(i, j int) bool { return s.FileList[i].shortName < s.FileList[j].shortName }
-
-type ByTotal struct{ FileList }
-
-func (s ByTotal) Less(i, j int) bool { return s.FileList[i].stat.Total < s.FileList[j].stat.Total }
-
-type ByCode struct{ FileList }
-
-func (s ByCode) Less(i, j int) bool { return s.FileList[i].stat.Code < s.FileList[j].stat.Code }
-
-type ByComment struct{ FileList }
-
-func (s ByComment) Less(i, j int) bool { return s.FileList[i].stat.Comment < s.FileList[j].stat.Comment }
-
-type ByBlank struct{ FileList }
-
-func (s ByBlank) Less(i, j int) bool { return s.FileList[i].stat.Blank < s.FileList[j].stat.Blank }
-
-type ByCommentPercent struct{ FileList }
-
-func (s ByCommentPercent) Less(i, j int) bool {
-	return s.FileList[i].stat.CommentPercent() < s.FileList[j].stat.CommentPercent()
-}
-
 func (f FileList) GetFileNameMaxLen() (fullNameMaxLen, shortNameMaxLen int) {
 	for _, v := range f {
 		if len(v.fileName) > fullNameMaxLen {
@@ -338,14 +305,16 @@ func PrintResult(files FileList, runConfig *RunConfig, allStats *AllStats) (ret 
 }
 
 func SortResult(files FileList, runConfig *RunConfig) {
-	sortobject := map[string]sort.Interface{
-		"fullname":        ByFullName{files},
-		"shortname":       ByShortName{files},
-		"total":           ByTotal{files},
-		"code":            ByCode{files},
-		"comment":         ByComment{files},
-		"blank":           ByBlank{files},
-		"comment-percent": ByCommentPercent{files},
+	type compareFunc func(i, j int) bool
+
+	sortobject := map[string]compareFunc{
+		"fullname":        func(i, j int) bool { return files[i].fileName < files[j].fileName },
+		"shortname":       func(i, j int) bool { return files[i].shortName < files[j].shortName },
+		"total":           func(i, j int) bool { return files[i].stat.Total < files[j].stat.Total },
+		"code":            func(i, j int) bool { return files[i].stat.Code < files[j].stat.Code },
+		"comment":         func(i, j int) bool { return files[i].stat.Comment < files[j].stat.Comment },
+		"blank":           func(i, j int) bool { return files[i].stat.Blank < files[j].stat.Blank },
+		"comment-percent": func(i, j int) bool { return files[i].stat.CommentPercent() < files[j].stat.CommentPercent() },
 	}
 
 	if runConfig.sortStat {
@@ -360,9 +329,9 @@ func SortResult(files FileList, runConfig *RunConfig) {
 		v, ok := sortobject[name]
 		if ok {
 			if runConfig.sortReverse {
-				sort.Sort(sort.Reverse(v))
+				sort.Slice(files, func(i, j int) bool { return !v(i, j) })
 			} else {
-				sort.Sort(v)
+				sort.Slice(files, v)
 			}
 		}
 	}
