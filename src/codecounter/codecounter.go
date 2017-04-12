@@ -121,7 +121,7 @@ type RunConfig struct {
 
 func (runConfig *RunConfig) Parse(codeConfigs []CodeConfig) {
 	flag.StringVar(&runConfig.root, "path", ".", "path for code")
-	flag.StringVar(&runConfig.filter, "filter", "*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc;*.c;*.h;*.go", "file filters")
+	flag.StringVar(&runConfig.filter, "filter", "*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc;*.c;*.h;*.go;*.java;*.erl;*.hrl", "file filters")
 	flag.BoolVar(&runConfig.showEachFile, "show", false, "show each file stat")
 	flag.BoolVar(&runConfig.showShortName, "short", true, "show file name without path")
 	flag.BoolVar(&runConfig.sortStat, "sort", true, "sort stat result")
@@ -140,11 +140,16 @@ func (runConfig *RunConfig) Parse(codeConfigs []CodeConfig) {
 
 func (runConfig *RunConfig) Check() bool {
 	_, err := os.Stat(runConfig.root)
+	if err == nil {
+		return true
+	}
+
 	if os.IsNotExist(err) {
 		fmt.Printf("ERROR: path \"%s\" is not exist", runConfig.root)
 		return false
 	}
-	return true
+	fmt.Printf("ERROR: path \"%s\" is invalid", runConfig.root)
+	return false
 }
 
 type CodeConfig struct {
@@ -257,6 +262,8 @@ func main() {
 		{"cpp", "*.cpp;*.cxx;*.hpp;*.hxx;*.c++;*.cc", "extions for c/c++ files"},
 		{"c", "*.c;*.h", "extions for c files"},
 		{"go", "*.go", "extions for go files"},
+		{"java", "*.java", "extions for java files"},
+		{"erlang", "*.erl;*.hrl", "extions for erlang files"},
 	}
 
 	runConfig := RunConfig{}

@@ -14,6 +14,8 @@ func NewCodeCounterFactory() *CodeCounterFactory {
 	factory.maps["go"] = NewGoCodeCounter()
 	factory.maps["cpp"] = NewCppCodeCounter()
 	factory.maps["c"] = NewCppCodeCounter()
+	factory.maps["java"] = NewCppCodeCounter()
+	factory.maps["erlang"] = NewErlangCodeCounter()
 	return factory
 }
 

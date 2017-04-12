@@ -161,7 +161,6 @@ func (c *CppCodeCounter) ParseLine(line string) (stat CodeStat) {
 				c.state = CPP_CODE_COUNT_STATE_STRING_ESCAPE
 			case '"':
 				c.state = CPP_CODE_COUNT_STATE_CODE
-				hasCode = true
 			}
 
 		case CPP_CODE_COUNT_STATE_STRING_ESCAPE:
@@ -174,7 +173,6 @@ func (c *CppCodeCounter) ParseLine(line string) (stat CodeStat) {
 				c.state = CPP_CODE_COUNT_STATE_CHAR_ESCAPE
 			case '\'':
 				c.state = CPP_CODE_COUNT_STATE_CODE
-				hasCode = true
 			}
 
 		case CPP_CODE_COUNT_STATE_CHAR_ESCAPE:

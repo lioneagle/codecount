@@ -78,9 +78,9 @@ func (c *GoCodeCounter) ParseLine(line string) (stat CodeStat) {
 	hasCode := false
 	hasComment := false
 
-	if c.state != GO_CODE_COUNT_STATE_BLOCK_COMMENT && c.state != GO_CODE_COUNT_STATE_BLOCK_STRING {
+	/*if c.state != GO_CODE_COUNT_STATE_BLOCK_COMMENT && c.state != GO_CODE_COUNT_STATE_BLOCK_STRING {
 		c.state = GO_CODE_COUNT_STATE_INIT
-	}
+	}*/
 
 	for _, v := range line {
 		if c.state == GO_CODE_COUNT_STATE_LINE_COMMENT {
