@@ -302,7 +302,7 @@ func Run(files FileList, extMapToCodeType *ExtMapToCodeType, allStats *AllStats)
 			continue
 		}
 
-		stat, ok := c.ParseFile(v.fileName)
+		stat, ok := counter.ParseFile(c, v.fileName)
 		if !ok {
 			log.Printf("ERROR: parse file %s failed", v.fileName)
 		}

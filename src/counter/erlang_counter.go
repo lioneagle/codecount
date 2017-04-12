@@ -1,11 +1,7 @@
 package counter
 
 import (
-	"bufio"
 	//"fmt"
-	"io"
-	"log"
-	"os"
 	"strings"
 )
 
@@ -27,31 +23,6 @@ func NewErlangCodeCounter() *ErlangCodeCounter {
 
 func (c *ErlangCodeCounter) Clear() { c.state = ERLANG_CODE_COUNT_STATE_INIT }
 
-func (c *ErlangCodeCounter) ParseFile(filename string) (stat CodeStat, ok bool) {
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Printf("ERROR: cannot open file %s", filename)
-		return stat, false
-	}
-	defer file.Close()
-
-	reader := bufio.NewReader(file)
-
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil && io.EOF != err {
-			break
-		}
-		lineStat := c.ParseLine(line)
-		stat.Add(&lineStat)
-		//fmt.Printf("line = %s\nlineStat = %s, state = %d\n", strings.TrimSpace(line), lineStat.String(), c.state)
-		if io.EOF == err {
-			break
-		}
-	}
-	return stat, true
-}
-
 func (c *ErlangCodeCounter) ParseLine(line string) (stat CodeStat) {
 	stat.Total = 1
 	line = strings.TrimSpace(line)
@@ -64,9 +35,9 @@ func (c *ErlangCodeCounter) ParseLine(line string) (stat CodeStat) {
 	hasCode := false
 	hasComment := false
 
-	if c.state != ERLANG_CODE_COUNT_STATE_STRING && c.state != ERLANG_CODE_COUNT_STATE_ATOM {
+	/*if c.state != ERLANG_CODE_COUNT_STATE_STRING && c.state != ERLANG_CODE_COUNT_STATE_ATOM {
 		c.state = ERLANG_CODE_COUNT_STATE_INIT
-	}
+	}*/
 
 	for _, v := range line {
 		//fmt.Printf("v = %c, state = %d\n", v, c.state)

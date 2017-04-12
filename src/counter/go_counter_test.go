@@ -48,7 +48,7 @@ func TestGoCodeCounterParseFile(t *testing.T) {
 	counter, _ := NewCodeCounterFactory().NewCounter("go")
 	wanted := CodeStat{Total: 22, Code: 13, Comment: 9, Blank: 2}
 
-	stat, ok := counter.ParseFile(filename)
+	stat, ok := ParseFile(counter, filename)
 	if !ok {
 		t.Errorf("TestGoCodeCounterParseFile failed, ParseFile failed")
 		return

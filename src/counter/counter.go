@@ -1,8 +1,13 @@
 package counter
 
 import (
+	"bufio"
 	"fmt"
 	"strconv"
+	//"fmt"
+	"io"
+	"log"
+	"os"
 )
 
 type CodeStat struct {
@@ -44,6 +49,31 @@ func (codeStat *CodeStat) CommentPercent() float64 {
 
 type CodeCounter interface {
 	Clear()
-	ParseFile(filename string) (stat CodeStat, ok bool)
 	ParseLine(line string) (stat CodeStat)
+}
+
+func ParseFile(counter CodeCounter, filename string) (stat CodeStat, ok bool) {
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Printf("ERROR: cannot open file %s", filename)
+		return stat, false
+	}
+	defer file.Close()
+
+	reader := bufio.NewReader(file)
+
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil && io.EOF != err {
+			break
+		}
+		lineStat := counter.ParseLine(line)
+		stat.Add(&lineStat)
+		//fmt.Printf("line = %s\nlineStat = %s, state = %d\n", strings.TrimSpace(line), lineStat.String(), c.state)
+
+		if io.EOF == err {
+			break
+		}
+	}
+	return stat, true
 }

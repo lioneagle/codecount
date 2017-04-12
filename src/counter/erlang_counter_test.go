@@ -39,7 +39,7 @@ func TestErlangCodeCounterParseFile(t *testing.T) {
 	counter, _ := NewCodeCounterFactory().NewCounter("erlang")
 	wanted := CodeStat{Total: 11, Code: 5, Comment: 4, Blank: 3}
 
-	stat, ok := counter.ParseFile(filename)
+	stat, ok := ParseFile(counter, filename)
 	if !ok {
 		t.Errorf("TestErlangCodeCounterParseFile failed, ParseFile failed")
 		return

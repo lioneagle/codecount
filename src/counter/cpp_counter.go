@@ -1,11 +1,7 @@
 package counter
 
 import (
-	"bufio"
 	//"fmt"
-	"io"
-	"log"
-	"os"
 	"strings"
 )
 
@@ -32,31 +28,6 @@ func NewCppCodeCounter() *CppCodeCounter {
 
 func (c *CppCodeCounter) Clear() { c.state = CPP_CODE_COUNT_STATE_INIT }
 
-func (c *CppCodeCounter) ParseFile(filename string) (stat CodeStat, ok bool) {
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Printf("ERROR: cannot open file %s", filename)
-		return stat, false
-	}
-	defer file.Close()
-
-	reader := bufio.NewReader(file)
-
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil && io.EOF != err {
-			break
-		}
-		lineStat := c.ParseLine(line)
-		stat.Add(&lineStat)
-		//fmt.Printf("line = %s\nlineStat = %s, state = %d\n", strings.TrimSpace(line), lineStat.String(), c.state)
-		if io.EOF == err {
-			break
-		}
-	}
-	return stat, true
-}
-
 func (c *CppCodeCounter) ParseLine(line string) (stat CodeStat) {
 	stat.Total = 1
 	line = strings.TrimSpace(line)
@@ -75,9 +46,9 @@ func (c *CppCodeCounter) ParseLine(line string) (stat CodeStat) {
 	hasCode := false
 	hasComment := false
 
-	if c.state != CPP_CODE_COUNT_STATE_BLOCK_COMMENT && c.state != CPP_CODE_COUNT_STATE_STRING && c.state != CPP_CODE_COUNT_STATE_STRING_ESCAPE {
+	/*if c.state != CPP_CODE_COUNT_STATE_BLOCK_COMMENT && c.state != CPP_CODE_COUNT_STATE_STRING && c.state != CPP_CODE_COUNT_STATE_STRING_ESCAPE {
 		c.state = CPP_CODE_COUNT_STATE_INIT
-	}
+	}*/
 
 	for _, v := range line {
 		//fmt.Printf("v = %c, state = %d\n", v, c.state)

@@ -44,7 +44,7 @@ func TestCppCodeCounterParseFile(t *testing.T) {
 	counter, _ := NewCodeCounterFactory().NewCounter("cpp")
 	wanted := CodeStat{Total: 21, Code: 13, Comment: 8, Blank: 2}
 
-	stat, ok := counter.ParseFile(filename)
+	stat, ok := ParseFile(counter, filename)
 	if !ok {
 		t.Errorf("TestCppCodeCounterParseFile failed, ParseFile failed")
 		return
