@@ -374,8 +374,5 @@ func OutputToCsvFile(files FileList, runConfig *RunConfig, allStats *AllStats) {
 }
 
 func PrintIdent(num int) (ret string) {
-	for i := 0; i < num; i++ {
-		ret += " "
-	}
-	return ret
+	return fmt.Sprintf(fmt.Sprintf("%%%ds", num), "")
 }
