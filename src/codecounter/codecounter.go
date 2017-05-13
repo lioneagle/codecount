@@ -43,7 +43,12 @@ func GetFiles(root string, filters []string, files *FileList) error {
 		for _, v := range filters {
 			if ok, _ := filepath.Match(v, f.Name()); ok {
 				fileinfo := &FileInfo{fileName: path, shortName: filepath.Base(path)}
-				fileinfo.ext = strings.ToLower(filepath.Ext(path)[1:])
+
+				ext := filepath.Ext(path)
+				if len(ext) != 0 {
+					fileinfo.ext = strings.ToLower(ext[1:])
+				}
+
 				*files = append(*files, fileinfo)
 			}
 		}
@@ -249,6 +254,8 @@ func main() {
 	files := FileList{}
 	GetFiles(runConfig.root, strings.Split(runConfig.filter, ";"), &files)
 
+	fmt.Println("len(files) =", len(files))
+
 	Run(files, extMapToCodeType, allStats)
 	OutputResult(files, &runConfig, allStats)
 }
@@ -259,7 +266,7 @@ func Run(files FileList, extMapToCodeType *ExtMapToCodeType, allStats *AllStats)
 	for _, v := range files {
 		codeType, ok := extMapToCodeType.maps[v.ext]
 		if !ok {
-			log.Printf("ERROR: unknown code type for %s", v.fileName)
+			//log.Printf("ERROR: unknown code type for %s", v.fileName)
 			continue
 		}
 
