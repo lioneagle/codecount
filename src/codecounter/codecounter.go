@@ -254,8 +254,6 @@ func main() {
 	files := FileList{}
 	GetFiles(runConfig.root, strings.Split(runConfig.filter, ";"), &files)
 
-	fmt.Println("len(files) =", len(files))
-
 	Run(files, extMapToCodeType, allStats)
 	OutputResult(files, &runConfig, allStats)
 }
