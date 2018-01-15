@@ -36,6 +36,10 @@ func (f FileList) GetFileNameMaxLen() (fullNameMaxLen, shortNameMaxLen int) {
 
 func GetFiles(root string, filters []string, files *FileList) error {
 	walkFunc := func(path string, f os.FileInfo, err error) error {
+		if f == nil {
+			return nil
+		}
+
 		if f.IsDir() {
 			return nil
 		}
@@ -289,12 +293,12 @@ func PrintResult(files FileList, runConfig *RunConfig, allStats *AllStats) (ret 
 	allStats.getMaxPrefixLen(files, runConfig)
 	SortResult(files, runConfig)
 	if runConfig.showEachFile {
-		for _, v := range files {
+		for i, v := range files {
 			if runConfig.showShortName {
-				ret += fmt.Sprintf("%s:  ", v.shortName)
+				ret += fmt.Sprintf("[%d]: %s:  ", i, v.shortName)
 				ret += PrintIdent(allStats.maxPrefixLen - len(v.shortName))
 			} else {
-				ret += fmt.Sprintf("%s:  ", v.fileName)
+				ret += fmt.Sprintf("[%d]: %s:  ", i, v.fileName)
 				ret += PrintIdent(allStats.maxPrefixLen - len(v.fileName))
 			}
 			ret += fmt.Sprintf("%s\n", v.stat.String())
